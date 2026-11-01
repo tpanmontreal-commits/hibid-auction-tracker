@@ -11,7 +11,7 @@ def scrape_hibid_auctions():
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
     }
     
-    target_url = "https://hibid.com/"
+    target_url = "https://hibid.com/catalog/790832/furniture--home-goods-and-reseller-finds---ssn258"
     
     try:
         response = requests.get(target_url, headers=headers, timeout=15)
@@ -26,7 +26,7 @@ def scrape_hibid_auctions():
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
             page_title = soup.title.string if soup.title else "No Title Found"
-            scraped_data["page_title"] = page_title
+            scraped_data["page_title"] = page_title.strip()
             scraped_data["success"] = True
         else:
             scraped_data["success"] = False
