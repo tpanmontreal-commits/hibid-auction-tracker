@@ -1,33 +1,48 @@
-name: HiBid Auction Scraper
+import json
+import os
+from datetime import datetime
+import requests
+from bs4 import BeautifulSoup
 
-on:
-  schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+def scrape_hibid_auctions():
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+    }
+    
+    target_url = "https://hibid.com/"
+    
+    try:
+        response = requests.get(target_url, headers=headers, timeout=15)
+        
+        scraped_data = {
+            "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "target_url": target_url,
+            "status_code": response.status_code,
+            "auctions": []
+        }
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            page_title = soup.title.string if soup.title else "No Title Found"
+            scraped_data["page_title"] = page_title
+            scraped_data["success"] = True
+        else:
+            scraped_data["success"] = False
+            scraped_data["error"] = f"HTTP Error {response.status_code}"
 
-jobs:
-  scrape:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+        with open("data.json", "w", encoding="utf-8") as f:
+            json.dump(scraped_data, f, ensure_ascii=False, indent=4)
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+    except Exception as e:
+        error_data = {
+            "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "success": False,
+            "error": str(e)
+        }
+        with open("data.json", "w", encoding="utf-8") as f:
+            json.dump(error_data, f, ensure_ascii=False, indent=4)
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
-
-      - name: Run scraper
-        run: python scraper.py
-
-      - name: Commit and push changes
-        run: |
-          git config --global user.name "GitHub Action Bot"
-          git config --global user.email "bot@github.com"
-          git add data.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update auction data: $(date +'%Y-%m-%d %H:%M')" && git push)
+if __name__ == "__main__":
+    scrape_hibid_auctions()
